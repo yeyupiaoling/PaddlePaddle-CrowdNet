@@ -1,3 +1,6 @@
 __pycache__/
 data/train/
 data/test/
+.idea/
+persistables_model/
+save_model/

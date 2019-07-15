@@ -1,5 +1,7 @@
 import os
 import shutil
+import zipfile
+from PIL import Image
 import numpy as np
 import paddle
 import paddle.fluid as fluid
@@ -8,7 +10,6 @@ from model import crowd_deconv_without_bn, dilations_cnn
 from myreader import train_set
 
 np.set_printoptions(threshold=np.inf)
-
 
 images = fluid.layers.data(name='images', shape=[3, 640, 480], dtype='float32')
 label = fluid.layers.data(name='label', shape=[1, 80, 60], dtype='float32')
@@ -33,7 +34,7 @@ sum_loss = loss + avg_cost * 6e5
 optimizer = fluid.optimizer.Adam(learning_rate=0.0001)
 optimizer.minimize(sum_loss)
 
-# 设置训练场所
+# 定义执行器
 use_cuda = True
 place = fluid.CUDAPlace(0) if use_cuda else fluid.CPUPlace()
 exe = fluid.Executor(place)
@@ -41,11 +42,11 @@ exe.run(fluid.default_startup_program())
 
 feeder = fluid.DataFeeder(feed_list=[images, label, img_num], place=place)
 
-# 设置训练reader
+# 定义reader
 train_reader = paddle.batch(reader=train_set(), batch_size=2)
 
 # 开始训练
-for epochs in range(20):
+for epochs in range(200):
     for batch_id, train_data in enumerate(train_reader()):
         train_cost, sult, lab, predict_sum, label_sum = exe.run(program=fluid.default_main_program(),
                                                                 feed=feeder.feed(train_data),
@@ -56,7 +57,13 @@ for epochs in range(20):
                 epochs, batch_id, train_cost[0], np.sum(sult), np.sum(lab), predict_sum[0], label_sum[0]))
 
     # 保存模型
-    model_save_dir = 'save_model/%d' % epochs
+    model_save_dir = 'save_model/'
     shutil.rmtree(model_save_dir, ignore_errors=True)
     os.makedirs(model_save_dir)
     fluid.io.save_inference_model(model_save_dir, ['images'], [sum_], exe)
+
+    # 保存模型
+    model_save_dir1 = 'persistables_model/%d' % epochs
+    shutil.rmtree(model_save_dir1, ignore_errors=True)
+    os.makedirs(model_save_dir1)
+    fluid.io.save_persistables(exe, model_save_dir1)

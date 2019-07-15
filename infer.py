@@ -18,7 +18,7 @@ use = True
 place = fluid.CUDAPlace(0) if use else fluid.CPUPlace()
 exe = fluid.Executor(place)
 
-[inference_program, feed_target_names, fetch_targets] = fluid.io.load_inference_model('save_model/1', exe)
+[inference_program, feed_target_names, fetch_targets] = fluid.io.load_inference_model('save_model/', exe)
 
 for index in range(len(l_test)):
     # ig_cv_img = Image.open(l_test[index])
