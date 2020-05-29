@@ -3,11 +3,19 @@ import shutil
 import numpy as np
 import paddle
 import paddle.fluid as fluid
-
 from model import crowd_deconv_without_bn, dilations_cnn
 from reader import train_set
 
 np.set_printoptions(threshold=np.inf)
+
+# 是否使用GPU
+use_cuda = True
+# 预测模型保存；路径
+infer_model_path = 'infer_model/'
+# 模型参数保存路径
+persistables_model_path = 'persistables_model/'
+# 训练轮数
+epochs_sum = 200
 
 images = fluid.layers.data(name='images', shape=[3, 640, 480], dtype='float32')
 label = fluid.layers.data(name='label', shape=[1, 80, 60], dtype='float32')
@@ -33,7 +41,6 @@ optimizer = fluid.optimizer.Adam(learning_rate=0.0001)
 optimizer.minimize(sum_loss)
 
 # 定义执行器
-use_cuda = True
 place = fluid.CUDAPlace(0) if use_cuda else fluid.CPUPlace()
 exe = fluid.Executor(place)
 exe.run(fluid.default_startup_program())
@@ -41,27 +48,35 @@ exe.run(fluid.default_startup_program())
 feeder = fluid.DataFeeder(feed_list=[images, label, img_num], place=place)
 
 # 定义reader
-train_reader = paddle.batch(reader=train_set(), batch_size=2)
+train_reader = paddle.batch(reader=train_set(), batch_size=4)
+
+# 加载训练模型
+if persistables_model_path is not None and os.path.exists(persistables_model_path):
+    def if_exist(var):
+        if os.path.exists(os.path.join(persistables_model_path, var.name)):
+            print('loaded: %s' % var.name)
+        return os.path.exists(os.path.join(persistables_model_path, var.name))
+
+
+    fluid.io.load_vars(exe, persistables_model_path, main_program=fluid.default_main_program(), predicate=if_exist)
 
 # 开始训练
-for epochs in range(200):
+for epochs in range(epochs_sum):
     for batch_id, train_data in enumerate(train_reader()):
-        train_cost, sult, lab, predict_sum, label_sum = exe.run(program=fluid.default_main_program(),
-                                                                feed=feeder.feed(train_data),
-                                                                fetch_list=[sum_loss, map_out, label, sum_, img_num])
+        train_cost, lab, predict_sum, label_sum = exe.run(program=fluid.default_main_program(),
+                                                          feed=feeder.feed(train_data),
+                                                          fetch_list=[sum_loss, label, sum_, img_num])
 
         if batch_id % 100 == 0:
-            print('Pass:%d, Batch:%d, Cost:%0.5f, predict:%0.5f, label:%0.5f, predict_sum:%0.5f, label_sum:%0.5f' % (
-                epochs, batch_id, train_cost[0], np.sum(sult)[0], np.sum(lab)[0], predict_sum[0], label_sum[0]))
+            print('Pass:%d, Batch:%d, Cost:%0.5f, predict_sum:%0.5f, label_sum:%0.5f' % (
+                epochs, batch_id, train_cost[0], predict_sum[0], label_sum[0]))
 
     # 保存模型
-    model_save_dir = 'save_model/'
-    shutil.rmtree(model_save_dir, ignore_errors=True)
-    os.makedirs(model_save_dir)
-    fluid.io.save_inference_model(model_save_dir, ['images'], [sum_], exe)
+    shutil.rmtree(infer_model_path, ignore_errors=True)
+    os.makedirs(infer_model_path)
+    fluid.io.save_inference_model(infer_model_path, [images.name], [sum_], exe)
 
     # 保存模型
-    model_save_dir1 = 'persistables_model/%d' % epochs
-    shutil.rmtree(model_save_dir1, ignore_errors=True)
-    os.makedirs(model_save_dir1)
-    fluid.io.save_persistables(exe, model_save_dir1)
+    shutil.rmtree(persistables_model_path, ignore_errors=True)
+    os.makedirs(persistables_model_path)
+    fluid.io.save_persistables(exe, persistables_model_path)

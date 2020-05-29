@@ -4,4 +4,4 @@ data/test/
 data/train.json
 .idea/
 persistables_model/
-save_model/
+infer_model/
