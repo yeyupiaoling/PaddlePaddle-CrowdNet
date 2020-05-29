@@ -8,13 +8,11 @@ from PIL import Image
 from scipy.ndimage.filters import gaussian_filter
 
 # 把图片对应的标签装入字典
-# f = open('/home/aistudio/data/data1917/train.json', encoding='utf-8')
 f = open('data/train.json', encoding='utf-8')
 content = json.load(f)
 
 # 把stage1都去掉：
 for j in range(len(content['annotations'])):
-    # content['annotations'][j]['name'] = content['annotations'][j]['name'].lstrip('stage1').lstrip('/')
     content['annotations'][j]['name'] = content['annotations'][j]['name'].replace('stage1', 'data')
 
 

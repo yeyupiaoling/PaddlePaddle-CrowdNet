@@ -7,7 +7,6 @@ import numpy as np
 import paddle.fluid as fluid
 from PIL import Image
 
-# test_zfile = zipfile.ZipFile("/home/aistudio/data/data1917/test_new.zip")
 test_zfile = zipfile.ZipFile("data/test_new.zip")
 l_test = []
 for test_fname in test_zfile.namelist()[1:]:
@@ -21,7 +20,6 @@ exe = fluid.Executor(place)
 [inference_program, feed_target_names, fetch_targets] = fluid.io.load_inference_model('save_model/', exe)
 
 for index in range(len(l_test)):
-    # ig_cv_img = Image.open(l_test[index])
     ig_cv_img = Image.open(os.path.join('data', l_test[index]))
     test_img = ig_cv_img.resize((640, 480), Image.ANTIALIAS)
     test_im = np.array(test_img)

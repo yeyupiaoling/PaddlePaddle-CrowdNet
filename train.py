@@ -1,13 +1,11 @@
 import os
 import shutil
-import zipfile
-from PIL import Image
 import numpy as np
 import paddle
 import paddle.fluid as fluid
 
 from model import crowd_deconv_without_bn, dilations_cnn
-from myreader import train_set
+from reader import train_set
 
 np.set_printoptions(threshold=np.inf)
 
@@ -54,7 +52,7 @@ for epochs in range(200):
 
         if batch_id % 100 == 0:
             print('Pass:%d, Batch:%d, Cost:%0.5f, predict:%0.5f, label:%0.5f, predict_sum:%0.5f, label_sum:%0.5f' % (
-                epochs, batch_id, train_cost[0], np.sum(sult), np.sum(lab), predict_sum[0], label_sum[0]))
+                epochs, batch_id, train_cost[0], np.sum(sult)[0], np.sum(lab)[0], predict_sum[0], label_sum[0]))
 
     # 保存模型
     model_save_dir = 'save_model/'
