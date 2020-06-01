@@ -3,8 +3,7 @@ import shutil
 import paddle
 import paddle.fluid as fluid
 from model import crowd_deconv_without_bn, dilations_cnn
-from reader import train_set
-
+import reader
 
 # 是否使用GPU
 use_cuda = True
@@ -48,7 +47,8 @@ exe.run(fluid.default_startup_program())
 feeder = fluid.DataFeeder(feed_list=[images, label, img_num], place=place)
 
 # 定义reader
-train_reader = paddle.batch(reader=train_set(), batch_size=batch_size)
+# train_reader = paddle.batch(reader=reader.train_set(), batch_size=batch_size)
+train_reader = paddle.shuffle(paddle.batch(reader=reader.train_set2(), batch_size=batch_size), buf_size=5000)
 
 # 加载训练模型
 if model_path is not None and os.path.exists(model_path):

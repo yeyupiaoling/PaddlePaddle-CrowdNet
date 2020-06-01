@@ -1,8 +1,10 @@
 import json
 import random
 
+from multiprocessing import cpu_count
 import cv2
 import numpy as np
+import paddle
 import scipy
 from PIL import Image
 from scipy.ndimage.filters import gaussian_filter
@@ -118,8 +120,8 @@ def ground(img, gt):
 
 def train_set():
     def inner():
+        random.shuffle(content['annotations'])
         for ig_index in range(len(content['annotations'])):
-            random.shuffle(content['annotations'])
             if len(content['annotations'][ig_index]['annotation']) == 2: continue
             if len(content['annotations'][ig_index]['annotation']) == 3: continue
             if content['annotations'][ig_index]['name'] == 'train/8538edb45aaf7df78336aa5b49001be6.jpg': continue
@@ -178,3 +180,31 @@ def train_set():
                 yield im, groundtruth, img_sum
 
     return inner
+
+
+def train_mapper(sample):
+    path, ann = sample
+    img = Image.open(path)
+    im, gt = picture_opt(img, ann)
+    k, img_sum = ground(im, gt)
+    groundtruth = np.asarray(k)
+    groundtruth = groundtruth.T.astype('float32')
+    im = im.transpose().astype('float32')
+    return im, groundtruth, img_sum
+
+
+def train_set2():
+    def reader():
+        random.shuffle(content['annotations'])
+        for ig_index in range(len(content['annotations'])):
+            if len(content['annotations'][ig_index]['annotation']) == 2: continue
+            if len(content['annotations'][ig_index]['annotation']) == 3: continue
+            if content['annotations'][ig_index]['name'] == 'train/8538edb45aaf7df78336aa5b49001be6.jpg': continue
+            if content['annotations'][ig_index]['name'] == 'train/377df0a7a9abc44e840e938521df3b54.jpg': continue
+            if content['annotations'][ig_index]['ignore_region']: continue
+
+            img_path = content['annotations'][ig_index]['name']
+            ann = content['annotations'][ig_index]['annotation']
+            yield img_path, ann
+
+    return paddle.reader.xmap_readers(train_mapper, reader, cpu_count(), 5000)
