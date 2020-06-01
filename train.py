@@ -48,7 +48,7 @@ feeder = fluid.DataFeeder(feed_list=[images, label, img_num], place=place)
 
 # 定义reader
 # train_reader = paddle.batch(reader=reader.train_set(), batch_size=batch_size)
-train_reader = paddle.shuffle(paddle.batch(reader=reader.train_set2(), batch_size=batch_size), buf_size=5000)
+train_reader = fluid.io.shuffle(paddle.batch(reader=reader.train_set2(), batch_size=batch_size), buf_size=5000)
 
 # 加载训练模型
 if model_path is not None and os.path.exists(model_path):
