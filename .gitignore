@@ -3,5 +3,5 @@ data/train/
 data/test/
 data/train.json
 .idea/
-persistables_model/
-infer_model/
+models/
+results.csv
