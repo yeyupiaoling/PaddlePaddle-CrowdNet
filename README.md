@@ -14,7 +14,3 @@
 
 ## 预测
  - 执行`python3 infer.py`预测图片，获取图像中人的数量
-
-
-## 参考资料
-1. https://blog.csdn.net/linhaisnow/article/details/82285833  
