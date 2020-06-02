@@ -1,5 +1,6 @@
 import json
 import random
+import cv2
 from multiprocessing import cpu_count
 import numpy as np
 import paddle
@@ -18,8 +19,21 @@ for j in range(len(content['annotations'])):
 
 # 图片增强和御处理
 def picture_opt(img, ann):
-    r = random.randint(0, 30)
+    # 随机图像处理
+    prob = np.random.uniform(0, 1)
+    if prob > 0.5:
+        delta = np.random.uniform(-0.125, 0.125) + 1
+        img = ImageEnhance.Brightness(img).enhance(delta)
+    prob = np.random.uniform(0, 1)
+    if prob < 0.5:
+        delta = np.random.uniform(-0.5, 0.5) + 1
+        img = ImageEnhance.Contrast(img).enhance(delta)
+    prob = np.random.uniform(0, 1)
+    if prob < 0.5:
+        delta = np.random.uniform(-0.5, 0.5) + 1
+        img = ImageEnhance.Color(img).enhance(delta)
 
+    r = random.randint(0, 30)
     gt = []
     if r > 20:
         # 不做数据增强
@@ -63,38 +77,55 @@ def picture_opt(img, ann):
                 gt.append((x, y))
     else:
         # 随机裁剪
-        size_x1, size_y1 = img.size
-        r_size_x1 = random.randint(0, 30)
-        r_size_y1 = random.randint(0, 30)
-        r_size_x2 = random.randint(0, 30)
-        r_size_y2 = random.randint(0, 30)
-        img = img.crop((r_size_x1, r_size_y1, size_x1 - r_size_x2, size_y1 - r_size_y2))
+        # size_x1, size_y1 = img.size
+        # r_size_x1 = random.randint(0, 30)
+        # r_size_y1 = random.randint(0, 30)
+        # r_size_x2 = random.randint(0, 30)
+        # r_size_y2 = random.randint(0, 30)
+        # img = img.crop((r_size_x1, r_size_y1, size_x1 - r_size_x2, size_y1 - r_size_y2))
+        # size_x, size_y = img.size
+        # train_img_size = (640, 480)
+        # img = img.resize(train_img_size, Image.ANTIALIAS)
+        # for b_l in range(len(ann)):
+        #     if 'w' in ann[b_l].keys():
+        #         # 框转点
+        #         x = (ann[b_l]['x'] + (ann[b_l]['x'] + ann[b_l]['w'])) / 2
+        #         y = ann[b_l]['y'] + 20
+        #         if r_size_x1 < x < (size_x1 - r_size_x2) and r_size_y1 < y < (size_y1 - r_size_y2):
+        #             x = x - r_size_x1
+        #             y = y - r_size_y1
+        #             x = (x * 640 / size_x) / 8
+        #             y = (y * 480 / size_y) / 8
+        #             gt.append((x, y))
+        #     else:
+        #         x = ann[b_l]['x']
+        #         y = ann[b_l]['y']
+        #         if r_size_x1 < x < (size_x1 - r_size_x2) and r_size_y1 < y < (size_y1 - r_size_y2):
+        #             x = x - r_size_x1
+        #             y = y - r_size_y1
+        #             x = (x * 640 / size_x) / 8
+        #             y = (y * 480 / size_y) / 8
+        #             gt.append((x, y))
+
         size_x, size_y = img.size
+        img = img.crop((2, 2, size_x - 2, size_y - 2))
         train_img_size = (640, 480)
         img = img.resize(train_img_size, Image.ANTIALIAS)
         for b_l in range(len(ann)):
             if 'w' in ann[b_l].keys():
-                # 框转点
                 x = (ann[b_l]['x'] + (ann[b_l]['x'] + ann[b_l]['w'])) / 2
                 y = ann[b_l]['y'] + 20
-                if r_size_x1 < x < (size_x1 - r_size_x2) and r_size_y1 < y < (size_y1 - r_size_y2):
-                    x = x - r_size_x1
-                    y = y - r_size_y1
-                    x = (x * 640 / size_x) / 8
-                    y = (y * 480 / size_y) / 8
-                    gt.append((x, y))
+                x = (x * 640 / size_x) / 8
+                y = (y * 480 / size_y) / 8
+                gt.append((x, y))
             else:
                 x = ann[b_l]['x']
                 y = ann[b_l]['y']
-                if r_size_x1 < x < (size_x1 - r_size_x2) and r_size_y1 < y < (size_y1 - r_size_y2):
-                    x = x - r_size_x1
-                    y = y - r_size_y1
-                    x = (x * 640 / size_x) / 8
-                    y = (y * 480 / size_y) / 8
-                    gt.append((x, y))
+                x = (x * 640 / size_x) / 8
+                y = (y * 480 / size_y) / 8
+                gt.append((x, y))
 
-    img = np.array(img)
-    img = img / 255.0
+    img = np.array(img) / 255.0
     return img, gt
 
 
@@ -112,7 +143,7 @@ def gaussian_filter_density(gt):
         pt2d[pt[1], pt[0]] = 1.
         if gt_count > 1:
             sigma = (distances[i][1] + distances[i][2] + distances[i][3]) * 0.1
-            sigma = 10
+            sigma = 25
         else:
             sigma = np.average(np.array(gt.shape)) / 2. / 2.
         density += scipy.ndimage.filters.gaussian_filter(pt2d, sigma, mode='constant')
@@ -137,20 +168,6 @@ def ground(img, gt):
 def train_mapper(sample):
     path, ann = sample
     img = Image.open(path)
-    # 随机图像处理
-    prob = np.random.uniform(0, 1)
-    if prob > 0.5:
-        delta = np.random.uniform(-0.125, 0.125) + 1
-        img = ImageEnhance.Brightness(img).enhance(delta)
-    prob = np.random.uniform(0, 1)
-    if prob < 0.5:
-        delta = np.random.uniform(-0.5, 0.5) + 1
-        img = ImageEnhance.Contrast(img).enhance(delta)
-    prob = np.random.uniform(0, 1)
-    if prob < 0.5:
-        delta = np.random.uniform(-0.5, 0.5) + 1
-        img = ImageEnhance.Color(img).enhance(delta)
-
     im, gt = picture_opt(img, ann)
     k, img_sum = ground(im, gt)
     groundtruth = np.asarray(k)
@@ -175,3 +192,67 @@ def train_reader():
             yield img_path, ann
 
     return paddle.reader.xmap_readers(train_mapper, reader, cpu_count(), 500)
+
+
+def train_reader2():
+    def reader():
+        random.shuffle(content['annotations'])
+        for ig_index in range(len(content['annotations'])):
+            if len(content['annotations'][ig_index]['annotation']) == 2: continue
+            if len(content['annotations'][ig_index]['annotation']) == 3: continue
+            if content['annotations'][ig_index]['name'] == 'train/8538edb45aaf7df78336aa5b49001be6.jpg': continue
+            if content['annotations'][ig_index]['name'] == 'train/377df0a7a9abc44e840e938521df3b54.jpg': continue
+            # 判断是否存在忽略区
+            if content['annotations'][ig_index]['ignore_region']:
+                ig_list = []
+                ig_list1 = []
+                # 忽略区为一个
+                if len(content['annotations'][ig_index]['ignore_region']) == 1:
+                    ign_rge = content['annotations'][ig_index]['ignore_region'][0]
+                    for ig_len in range(len(ign_rge)):
+                        ig_list.append([ign_rge[ig_len]['x'], ign_rge[ig_len]['y']])
+                    ig_cv_img = cv2.imread(content['annotations'][ig_index]['name'])
+                    pts = np.array(ig_list, np.int32)
+                    cv2.fillPoly(ig_cv_img, [pts], (0, 0, 0), cv2.LINE_AA)
+                    ig_img = Image.fromarray(cv2.cvtColor(ig_cv_img, cv2.COLOR_BGR2RGB))
+                    ann = content['annotations'][ig_index]['annotation']
+                    ig_im, gt = picture_opt(ig_img, ann)
+                    k, img_sum = ground(ig_im, gt)
+                    groundtruth = np.asarray(k)
+                    groundtruth = groundtruth.T.astype('float32')
+                    ig_im = ig_im.transpose().astype('float32')
+                    yield ig_im, groundtruth, img_sum
+                # 有2个忽略区域
+                if len(content['annotations'][ig_index]['ignore_region']) == 2:
+                    ign_rge = content['annotations'][ig_index]['ignore_region'][0]
+                    ign_rge1 = content['annotations'][ig_index]['ignore_region'][1]
+                    for ig_len in range(len(ign_rge)):
+                        ig_list.append([ign_rge[ig_len]['x'], ign_rge[ig_len]['y']])
+                    for ig_len1 in range(len(ign_rge1)):
+                        ig_list1.append([ign_rge1[ig_len1]['x'], ign_rge1[ig_len1]['y']])
+                    ig_cv_img2 = cv2.imread(content['annotations'][ig_index]['name'])
+                    pts = np.array(ig_list, np.int32)
+                    pts1 = np.array(ig_list1, np.int32)
+                    cv2.fillPoly(ig_cv_img2, [pts], (0, 0, 0), cv2.LINE_AA)
+                    cv2.fillPoly(ig_cv_img2, [pts1], (0, 0, 0), cv2.LINE_AA)
+                    ig_img2 = Image.fromarray(cv2.cvtColor(ig_cv_img2, cv2.COLOR_BGR2RGB))  # cv2转PIL
+                    ann = content['annotations'][ig_index]['annotation']  # 把所有标注的信息读取出来
+                    ig_im, gt = picture_opt(ig_img2, ann)
+                    k, img_sum = ground(ig_im, gt)
+                    k = np.zeros((int(ig_im.shape[0] / 8), int(ig_im.shape[1] / 8)))
+                    groundtruth = np.asarray(k)
+                    groundtruth = groundtruth.T.astype('float32')
+                    ig_im = ig_im.transpose().astype('float32')
+                    yield ig_im, groundtruth, img_sum
+
+            else:
+                img = Image.open(content['annotations'][ig_index]['name'])
+                ann = content['annotations'][ig_index]['annotation']
+                im, gt = picture_opt(img, ann)
+                k, img_sum = ground(im, gt)
+                groundtruth = np.asarray(k)
+                groundtruth = groundtruth.T.astype('float32')
+                im = im.transpose().astype('float32')
+                yield im, groundtruth, img_sum
+
+    return reader
