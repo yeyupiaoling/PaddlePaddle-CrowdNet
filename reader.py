@@ -3,7 +3,7 @@ import random
 import cv2
 from multiprocessing import cpu_count
 import numpy as np
-import paddle
+import paddle.fluid as fluid
 import scipy
 from PIL import Image, ImageEnhance
 from scipy.ndimage.filters import gaussian_filter
@@ -17,8 +17,10 @@ for j in range(len(content['annotations'])):
     content['annotations'][j]['name'] = content['annotations'][j]['name'].replace('stage1', 'data')
 
 
-# 图片增强和御处理
+# 图片增强和预处理
 def picture_opt(img, ann):
+    # 缩放的图像大小
+    train_img_size = (640, 480)
     # 随机图像处理
     prob = np.random.uniform(0, 1)
     if prob > 0.5:
@@ -38,7 +40,6 @@ def picture_opt(img, ann):
     if r > 20:
         # 不做数据增强
         size_x, size_y = img.size
-        train_img_size = (640, 480)
         img = img.resize(train_img_size, Image.ANTIALIAS)
 
         for b_l in range(len(ann)):
@@ -46,19 +47,18 @@ def picture_opt(img, ann):
                 # 框转点
                 x = (ann[b_l]['x'] + (ann[b_l]['x'] + ann[b_l]['w'])) / 2
                 y = ann[b_l]['y'] + 20
-                x = (x * 640 / size_x) / 8
-                y = (y * 480 / size_y) / 8
+                x = (x * train_img_size[0] / size_x) / 8
+                y = (y * train_img_size[1] / size_y) / 8
                 gt.append((x, y))
             else:
                 x = ann[b_l]['x']
                 y = ann[b_l]['y']
-                x = (x * 640 / size_x) / 8
-                y = (y * 480 / size_y) / 8
+                x = (x * train_img_size[0] / size_x) / 8
+                y = (y * train_img_size[1] / size_y) / 8
                 gt.append((x, y))
     elif r > 10:
         # 水平翻转
         size_x, size_y = img.size
-        train_img_size = (640, 480)
         img = img.resize(train_img_size, Image.ANTIALIAS)
         img = img.transpose(Image.FLIP_LEFT_RIGHT)
         for b_l in range(len(ann)):
@@ -66,63 +66,32 @@ def picture_opt(img, ann):
                 # 框转点
                 x = (ann[b_l]['x'] + (ann[b_l]['x'] + ann[b_l]['w'])) / 2
                 y = ann[b_l]['y'] + 20
-                x = (640 - (x * 640 / size_x)) / 8
-                y = (y * 480 / size_y) / 8
+                x = (train_img_size[0] - (x * train_img_size[0] / size_x)) / 8
+                y = (y * train_img_size[1] / size_y) / 8
                 gt.append((x, y))
             else:
                 x = ann[b_l]['x']
                 y = ann[b_l]['y']
-                x = (640 - (x * 640 / size_x)) / 8
-                y = (y * 480 / size_y) / 8
+                x = (train_img_size[0] - (x * train_img_size[0] / size_x)) / 8
+                y = (y * train_img_size[1] / size_y) / 8
                 gt.append((x, y))
     else:
-        # 随机裁剪
-        # size_x1, size_y1 = img.size
-        # r_size_x1 = random.randint(0, 30)
-        # r_size_y1 = random.randint(0, 30)
-        # r_size_x2 = random.randint(0, 30)
-        # r_size_y2 = random.randint(0, 30)
-        # img = img.crop((r_size_x1, r_size_y1, size_x1 - r_size_x2, size_y1 - r_size_y2))
-        # size_x, size_y = img.size
-        # train_img_size = (640, 480)
-        # img = img.resize(train_img_size, Image.ANTIALIAS)
-        # for b_l in range(len(ann)):
-        #     if 'w' in ann[b_l].keys():
-        #         # 框转点
-        #         x = (ann[b_l]['x'] + (ann[b_l]['x'] + ann[b_l]['w'])) / 2
-        #         y = ann[b_l]['y'] + 20
-        #         if r_size_x1 < x < (size_x1 - r_size_x2) and r_size_y1 < y < (size_y1 - r_size_y2):
-        #             x = x - r_size_x1
-        #             y = y - r_size_y1
-        #             x = (x * 640 / size_x) / 8
-        #             y = (y * 480 / size_y) / 8
-        #             gt.append((x, y))
-        #     else:
-        #         x = ann[b_l]['x']
-        #         y = ann[b_l]['y']
-        #         if r_size_x1 < x < (size_x1 - r_size_x2) and r_size_y1 < y < (size_y1 - r_size_y2):
-        #             x = x - r_size_x1
-        #             y = y - r_size_y1
-        #             x = (x * 640 / size_x) / 8
-        #             y = (y * 480 / size_y) / 8
-        #             gt.append((x, y))
-
+        # 裁剪
         size_x, size_y = img.size
         img = img.crop((2, 2, size_x - 2, size_y - 2))
-        train_img_size = (640, 480)
         img = img.resize(train_img_size, Image.ANTIALIAS)
         for b_l in range(len(ann)):
             if 'w' in ann[b_l].keys():
                 x = (ann[b_l]['x'] + (ann[b_l]['x'] + ann[b_l]['w'])) / 2
                 y = ann[b_l]['y'] + 20
-                x = (x * 640 / size_x) / 8
-                y = (y * 480 / size_y) / 8
+                x = (x * train_img_size[0] / size_x) / 8
+                y = (y * train_img_size[1] / size_y) / 8
                 gt.append((x, y))
             else:
                 x = ann[b_l]['x']
                 y = ann[b_l]['y']
-                x = (x * 640 / size_x) / 8
-                y = (y * 480 / size_y) / 8
+                x = (x * train_img_size[0] / size_x) / 8
+                y = (y * train_img_size[1] / size_y) / 8
                 gt.append((x, y))
 
     img = np.array(img) / 255.0
@@ -176,6 +145,7 @@ def train_mapper(sample):
     return im, groundtruth, img_sum
 
 
+# 获取数据读取reader（忽略全部的忽略区）
 def train_reader():
     def reader():
         random.shuffle(content['annotations'])
@@ -191,9 +161,10 @@ def train_reader():
             ann = content['annotations'][ig_index]['annotation']
             yield img_path, ann
 
-    return paddle.reader.xmap_readers(train_mapper, reader, cpu_count(), 500)
+    return fluid.io.xmap_readers(train_mapper, reader, cpu_count(), 500)
 
 
+# 获取数据读取reader
 def train_reader2():
     def reader():
         random.shuffle(content['annotations'])

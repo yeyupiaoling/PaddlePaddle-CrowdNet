@@ -1,5 +1,5 @@
 import paddle.fluid as fluid
-from paddle import ParamAttr
+from paddle.fluid import ParamAttr
 from paddle.fluid.initializer import MSRA
 
 
