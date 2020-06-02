@@ -17,7 +17,6 @@ def crowd_deconv_without_bn(img):
     x = fluid.layers.conv2d(input=x, num_filters=512, filter_size=3, padding=1, act='relu')
     x = fluid.layers.conv2d(input=x, num_filters=512, filter_size=3, padding=1, act='relu')
     x = fluid.layers.pool2d(input=x, pool_size=3, pool_type="max", pool_stride=1, pool_padding=1)
-    x = fluid.layers.dropout(x=x, dropout_prob=0.5)
     x = fluid.layers.conv2d(input=x, num_filters=512, filter_size=3, padding=1, act='relu')
     x = fluid.layers.conv2d(input=x, num_filters=512, filter_size=3, padding=1, act='relu')
     x = fluid.layers.conv2d(input=x, num_filters=512, filter_size=3, padding=1)
