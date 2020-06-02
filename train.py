@@ -12,7 +12,7 @@ model_path = 'models/'
 # 训练轮数
 epochs_sum = 400
 # Batch大小
-batch_size = 8
+batch_size = 6
 
 # 定义输入层
 images = fluid.layers.data(name='images', shape=[3, 640, 480], dtype='float32')
@@ -47,8 +47,7 @@ exe.run(fluid.default_startup_program())
 feeder = fluid.DataFeeder(feed_list=[images, label, img_num], place=place)
 
 # 定义reader
-# train_reader = paddle.batch(reader=reader.train_set(), batch_size=batch_size)
-train_reader = fluid.io.shuffle(paddle.batch(reader=reader.train_set2(), batch_size=batch_size), buf_size=5000)
+train_reader = fluid.io.shuffle(paddle.batch(reader=reader.train_reader(), batch_size=batch_size), buf_size=5000)
 
 # 加载训练模型
 if model_path is not None and os.path.exists(model_path):
