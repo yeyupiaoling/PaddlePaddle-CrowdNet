@@ -21,13 +21,16 @@ def deep_network(img):
     x = conv_bn(input=x, num_filters=64, filter_size=3, padding=1, act='relu')
     x = conv_bn(input=x, num_filters=64, filter_size=3, padding=1, act='relu')
     x = fluid.layers.pool2d(input=x, pool_size=2, pool_stride=2)
+    x = fluid.layers.dropout(x=x, dropout_prob=0.25)
     x = conv_bn(input=x, num_filters=128, filter_size=3, padding=1, act='relu')
     x = conv_bn(input=x, num_filters=128, filter_size=3, padding=1, act='relu')
     x = fluid.layers.pool2d(input=x, pool_size=2, pool_stride=2)
+    x = fluid.layers.dropout(x=x, dropout_prob=0.25)
     x = conv_bn(input=x, num_filters=256, filter_size=3, padding=1, act='relu')
     x = conv_bn(input=x, num_filters=256, filter_size=3, padding=1, act='relu')
     x = conv_bn(input=x, num_filters=256, filter_size=3, padding=1, act='relu')
     x = fluid.layers.pool2d(input=x, pool_size=2, pool_stride=2)
+    x = fluid.layers.dropout(x=x, dropout_prob=0.5)
     x = conv_bn(input=x, num_filters=512, filter_size=3, padding=1, act='relu')
     x = conv_bn(input=x, num_filters=512, filter_size=3, padding=1, act='relu')
     x = conv_bn(input=x, num_filters=512, filter_size=3, padding=1, act='relu')
@@ -35,6 +38,7 @@ def deep_network(img):
     x = conv_bn(input=x, num_filters=512, filter_size=3, padding=1, act='relu')
     x = conv_bn(input=x, num_filters=512, filter_size=3, padding=1, act='relu')
     x = conv_bn(input=x, num_filters=512, filter_size=3, padding=1)
+    x = fluid.layers.dropout(x=x, dropout_prob=0.5)
     return x
 
 
