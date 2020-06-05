@@ -34,11 +34,8 @@ sum_ = fluid.layers.reduce_sum(map_out, dim=[1, 2, 3])
 sum_ = fluid.layers.reshape(sum_, [-1, 1])
 
 # 定义损失函数
-loss1 = fluid.layers.square_error_cost(input=map_out, label=label)
-loss1 = fluid.layers.mean(loss1)
-loss2 = fluid.layers.square_error_cost(input=sum_, label=img_num)
-loss2 = fluid.layers.mean(loss2)
-loss = loss1 + loss2
+loss = fluid.layers.square_error_cost(input=map_out, label=label) * 6e5
+loss = fluid.layers.mean(loss)
 
 optimizer = fluid.optimizer.Adam(learning_rate=0.001)
 optimizer.minimize(loss)
@@ -85,4 +82,4 @@ for epochs in range(EPOCHS_SUM):
     # 保存预测模型
     shutil.rmtree(INFER_MODEL, ignore_errors=True)
     os.makedirs(INFER_MODEL)
-    fluid.io.save_inference_model(INFER_MODEL, [images.name], [sum_], exe)
+    fluid.io.save_inference_model(INFER_MODEL, [images.name], [map_out, sum_], exe)

@@ -3,10 +3,9 @@ import os
 import numpy as np
 import paddle.fluid as fluid
 from PIL import Image
-
-# 是否使用GPU
 from tqdm import tqdm
 
+# 是否使用GPU
 USE_CUDA = True
 INFER_MODEL = 'infer_model/'
 
@@ -27,8 +26,8 @@ def infer(path):
     results = exe.run(program=inference_program,
                       feed={feed_target_names[0]: test_im},
                       fetch_list=fetch_targets)
-
-    q = int(np.sum(results) + 0.5)
+    density, quantity = results[0], results[1]
+    q = int(abs(quantity) + 0.5)
     return q
 
 
