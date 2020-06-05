@@ -139,7 +139,9 @@ def train_mapper(sample):
     im, gt = picture_opt(img, ann)
     k, img_sum = ground(im, gt)
     groundtruth = np.asarray(k)
+    # 密度图转置符合PaddlePaddle输出
     groundtruth = groundtruth.T.astype('float32')
+    # 图片转置符合PaddlePaddle输入
     im = im.transpose().astype('float32')
     return im, groundtruth, img_sum
 
@@ -170,7 +172,7 @@ def train_reader2():
         for ig_index in range(len(content['annotations'])):
             if len(content['annotations'][ig_index]['annotation']) == 2: continue
             if len(content['annotations'][ig_index]['annotation']) == 3: continue
-            if len(content['annotations'][ig_index]['ignore_region']) == 2:continue
+            if len(content['annotations'][ig_index]['ignore_region']) == 2: continue
             if content['annotations'][ig_index]['name'] == 'train/8538edb45aaf7df78336aa5b49001be6.jpg': continue
             if content['annotations'][ig_index]['name'] == 'train/377df0a7a9abc44e840e938521df3b54.jpg': continue
             # 判断是否存在忽略区
@@ -189,7 +191,9 @@ def train_reader2():
                     ig_im, gt = picture_opt(ig_img, ann)
                     k, img_sum = ground(ig_im, gt)
                     groundtruth = np.asarray(k)
+                    # 密度图转置符合PaddlePaddle输出
                     groundtruth = groundtruth.T.astype('float32')
+                    # 图片转置符合PaddlePaddle输入
                     ig_im = ig_im.transpose().astype('float32')
                     yield ig_im, groundtruth, img_sum
             else:
@@ -198,7 +202,9 @@ def train_reader2():
                 im, gt = picture_opt(img, ann)
                 k, img_sum = ground(im, gt)
                 groundtruth = np.asarray(k)
+                # 密度图转置符合PaddlePaddle输出
                 groundtruth = groundtruth.T.astype('float32')
+                # 图片转置符合PaddlePaddle输入
                 im = im.transpose().astype('float32')
                 yield im, groundtruth, img_sum
 

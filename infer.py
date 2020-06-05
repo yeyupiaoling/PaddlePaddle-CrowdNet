@@ -17,18 +17,20 @@ exe = fluid.Executor(place)
  fetch_targets] = fluid.io.load_inference_model(INFER_MODEL, exe)
 
 
+# 预测图像获得密度图和人数
 def infer(path):
-    ig_cv_img = Image.open(path)
-    test_img = ig_cv_img.resize((640, 480), Image.ANTIALIAS)
+    test_img = Image.open(path)
+    test_img = test_img.resize((640, 480), Image.ANTIALIAS)
     test_im = np.array(test_img) / 255.0
     test_im = test_im.transpose().reshape(1, 3, 640, 480).astype('float32')
 
     results = exe.run(program=inference_program,
                       feed={feed_target_names[0]: test_im},
                       fetch_list=fetch_targets)
+    # density为密度图，quantity为人数
     density, quantity = results[0], results[1]
     q = int(abs(quantity) + 0.5)
-    return q
+    return density, q
 
 
 if __name__ == '__main__':
@@ -38,7 +40,7 @@ if __name__ == '__main__':
     images = os.listdir(test_path)
     for image in tqdm(images):
         image_path = os.path.join(test_path, image)
-        q = infer(image_path)
+        _, q = infer(image_path)
         data_dict[image[:-4]] = int(q)
 
     with open('results.csv', 'w', newline='') as csvfile:
