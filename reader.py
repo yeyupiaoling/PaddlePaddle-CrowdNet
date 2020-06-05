@@ -1,20 +1,10 @@
-import json
 import random
-import cv2
-from multiprocessing import cpu_count
+import scipy
 import numpy as np
 import paddle.fluid as fluid
-import scipy
 from PIL import Image, ImageEnhance
+from multiprocessing import cpu_count
 from scipy.ndimage.filters import gaussian_filter
-
-# 把图片对应的标签装入字典
-f = open('data/train.json', encoding='utf-8')
-content = json.load(f)
-
-# 图像路径替换
-for j in range(len(content['annotations'])):
-    content['annotations'][j]['name'] = content['annotations'][j]['name'].replace('stage1', 'data')
 
 
 # 图片增强和预处理
@@ -43,57 +33,33 @@ def picture_opt(img, ann):
         img = img.resize(train_img_size, Image.ANTIALIAS)
 
         for b_l in range(len(ann)):
-            if 'w' in ann[b_l].keys():
-                # 框转点
-                x = (ann[b_l]['x'] + (ann[b_l]['x'] + ann[b_l]['w'])) / 2
-                y = ann[b_l]['y'] + 20
-                x = (x * train_img_size[0] / size_x) / 8
-                y = (y * train_img_size[1] / size_y) / 8
-                gt.append((x, y))
-            else:
-                x = ann[b_l]['x']
-                y = ann[b_l]['y']
-                x = (x * train_img_size[0] / size_x) / 8
-                y = (y * train_img_size[1] / size_y) / 8
-                gt.append((x, y))
+            x = ann[b_l][0]
+            y = ann[b_l][1]
+            x = (x * train_img_size[0] / size_x) / 8
+            y = (y * train_img_size[1] / size_y) / 8
+            gt.append((x, y))
     elif r > 10:
         # 水平翻转
         size_x, size_y = img.size
         img = img.resize(train_img_size, Image.ANTIALIAS)
         img = img.transpose(Image.FLIP_LEFT_RIGHT)
         for b_l in range(len(ann)):
-            if 'w' in ann[b_l].keys():
-                # 框转点
-                x = (ann[b_l]['x'] + (ann[b_l]['x'] + ann[b_l]['w'])) / 2
-                y = ann[b_l]['y'] + 20
-                x = (train_img_size[0] - (x * train_img_size[0] / size_x)) / 8
-                y = (y * train_img_size[1] / size_y) / 8
-                gt.append((x, y))
-            else:
-                x = ann[b_l]['x']
-                y = ann[b_l]['y']
-                x = (train_img_size[0] - (x * train_img_size[0] / size_x)) / 8
-                y = (y * train_img_size[1] / size_y) / 8
-                gt.append((x, y))
+            x = ann[b_l][0]
+            y = ann[b_l][1]
+            x = (train_img_size[0] - (x * train_img_size[0] / size_x)) / 8
+            y = (y * train_img_size[1] / size_y) / 8
+            gt.append((x, y))
     else:
         # 裁剪
         size_x, size_y = img.size
         img = img.crop((2, 2, size_x - 2, size_y - 2))
         img = img.resize(train_img_size, Image.ANTIALIAS)
         for b_l in range(len(ann)):
-            if 'w' in ann[b_l].keys():
-                x = (ann[b_l]['x'] + (ann[b_l]['x'] + ann[b_l]['w'])) / 2
-                y = ann[b_l]['y'] + 20
-                x = (x * train_img_size[0] / size_x) / 8
-                y = (y * train_img_size[1] / size_y) / 8
-                gt.append((x, y))
-            else:
-                x = ann[b_l]['x']
-                y = ann[b_l]['y']
-                x = (x * train_img_size[0] / size_x) / 8
-                y = (y * train_img_size[1] / size_y) / 8
-                gt.append((x, y))
-
+            x = ann[b_l][0]
+            y = ann[b_l][1]
+            x = (x * train_img_size[0] / size_x) / 8
+            y = (y * train_img_size[1] / size_y) / 8
+            gt.append((x, y))
     img = np.array(img) / 255.0
     return img, gt
 
@@ -134,9 +100,9 @@ def ground(img, gt):
 
 # 图像预处理
 def train_mapper(sample):
-    path, ann = sample
+    path, gt = sample
     img = Image.open(path)
-    im, gt = picture_opt(img, ann)
+    im, gt = picture_opt(img, gt)
     k, img_sum = ground(im, gt)
     groundtruth = np.asarray(k)
     # 密度图转置符合PaddlePaddle输出
@@ -146,66 +112,16 @@ def train_mapper(sample):
     return im, groundtruth, img_sum
 
 
-# 获取数据读取reader（忽略全部的忽略区）
-def train_reader():
-    def reader():
-        random.shuffle(content['annotations'])
-        for ig_index in range(len(content['annotations'])):
-            # 忽略有忽略区的图片
-            if len(content['annotations'][ig_index]['annotation']) == 2: continue
-            if len(content['annotations'][ig_index]['annotation']) == 3: continue
-            if content['annotations'][ig_index]['name'] == 'train/8538edb45aaf7df78336aa5b49001be6.jpg': continue
-            if content['annotations'][ig_index]['name'] == 'train/377df0a7a9abc44e840e938521df3b54.jpg': continue
-            if content['annotations'][ig_index]['ignore_region']: continue
+# 获取数据读取reader
+def train_reader(data_list_file):
+    with open(data_list_file, 'r', encoding='utf-8') as f:
+        lines = f.readlines()
 
-            img_path = content['annotations'][ig_index]['name']
-            ann = content['annotations'][ig_index]['annotation']
-            yield img_path, ann
+    def reader():
+        random.shuffle(lines)
+        for line in lines:
+            img_path, gt = line.replace('\n', '').split('\t')
+            gt = eval(gt)
+            yield img_path, gt
 
     return fluid.io.xmap_readers(train_mapper, reader, cpu_count(), 500)
-
-
-# 获取数据读取reader
-def train_reader2():
-    def reader():
-        random.shuffle(content['annotations'])
-        for ig_index in range(len(content['annotations'])):
-            if len(content['annotations'][ig_index]['annotation']) == 2: continue
-            if len(content['annotations'][ig_index]['annotation']) == 3: continue
-            if len(content['annotations'][ig_index]['ignore_region']) == 2: continue
-            if content['annotations'][ig_index]['name'] == 'train/8538edb45aaf7df78336aa5b49001be6.jpg': continue
-            if content['annotations'][ig_index]['name'] == 'train/377df0a7a9abc44e840e938521df3b54.jpg': continue
-            # 判断是否存在忽略区
-            if content['annotations'][ig_index]['ignore_region']:
-                ig_list = []
-                # 忽略区为一个
-                if len(content['annotations'][ig_index]['ignore_region']) == 1:
-                    ign_rge = content['annotations'][ig_index]['ignore_region'][0]
-                    for ig_len in range(len(ign_rge)):
-                        ig_list.append([ign_rge[ig_len]['x'], ign_rge[ig_len]['y']])
-                    ig_cv_img = cv2.imread(content['annotations'][ig_index]['name'])
-                    pts = np.array(ig_list, np.int32)
-                    cv2.fillPoly(ig_cv_img, [pts], (0, 0, 0), cv2.LINE_AA)
-                    ig_img = Image.fromarray(cv2.cvtColor(ig_cv_img, cv2.COLOR_BGR2RGB))
-                    ann = content['annotations'][ig_index]['annotation']
-                    ig_im, gt = picture_opt(ig_img, ann)
-                    k, img_sum = ground(ig_im, gt)
-                    groundtruth = np.asarray(k)
-                    # 密度图转置符合PaddlePaddle输出
-                    groundtruth = groundtruth.T.astype('float32')
-                    # 图片转置符合PaddlePaddle输入
-                    ig_im = ig_im.transpose().astype('float32')
-                    yield ig_im, groundtruth, img_sum
-            else:
-                img = Image.open(content['annotations'][ig_index]['name'])
-                ann = content['annotations'][ig_index]['annotation']
-                im, gt = picture_opt(img, ann)
-                k, img_sum = ground(im, gt)
-                groundtruth = np.asarray(k)
-                # 密度图转置符合PaddlePaddle输出
-                groundtruth = groundtruth.T.astype('float32')
-                # 图片转置符合PaddlePaddle输入
-                im = im.transpose().astype('float32')
-                yield im, groundtruth, img_sum
-
-    return reader
