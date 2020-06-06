@@ -13,9 +13,11 @@ PERSISTABLES_MODEL_PATH = 'persistables_model/'
 # 预测模型保存路径
 INFER_MODEL = 'infer_model/'
 # 训练轮数
-EPOCHS_SUM = 400
+EPOCHS_SUM = 800
 # Batch大小
 BATCH_SIZE = 6
+# 图像列表路径
+data_list_file = 'data/data_list.txt'
 
 # 定义输入层
 images = fluid.data(name='images', shape=[None, 3, 640, 480], dtype='float32')
@@ -50,7 +52,7 @@ py_reader = fluid.io.PyReader(feed_list=[images, label, img_num],
                               capacity=32,
                               iterable=True,
                               return_list=False)
-py_reader.decorate_sample_list_generator(paddle.batch(reader.train_reader(), batch_size=BATCH_SIZE),
+py_reader.decorate_sample_list_generator(paddle.batch(reader.train_reader(data_list_file), batch_size=BATCH_SIZE),
                                          places=fluid.core.CPUPlace())
 
 # 加载训练模型
