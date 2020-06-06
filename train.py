@@ -50,7 +50,7 @@ py_reader = fluid.io.PyReader(feed_list=[images, label, img_num],
                               capacity=32,
                               iterable=True,
                               return_list=False)
-py_reader.decorate_sample_list_generator(paddle.batch(reader.train_reader2(), batch_size=BATCH_SIZE),
+py_reader.decorate_sample_list_generator(paddle.batch(reader.train_reader(), batch_size=BATCH_SIZE),
                                          places=fluid.core.CPUPlace())
 
 # 加载训练模型
