@@ -282,8 +282,8 @@ plt.imshow(density[0][0].T,cmap=CM.jet)
 
 | 模型名称 | 所用数据集 | 下载地址 |
 | :---: | :---: | :---: |
-| 预训练模型 | 常规赛-人流密度预测数据集 | [点击下载](https://download.csdn.net/download/qq_33200967/14029077) |
-| 预测模型 | 常规赛-人流密度预测数据集 | [点击下载](https://download.csdn.net/download/qq_33200967/14029087) |
+| 预训练模型 | 常规赛-人流密度预测数据集 | [点击下载](https://resource.doiduoyi.com/#24332i5) |
+| 预测模型 | 常规赛-人流密度预测数据集 | [点击下载](https://resource.doiduoyi.com/#m761c1y) |
 
 
 **创作不易，给个star吧**
